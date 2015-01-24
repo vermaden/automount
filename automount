@@ -116,20 +116,16 @@ BOOTDELAY (set to 45 seconds by default)
   How long to wait for boot process to complete.
 
   example: BOOTDELAY="30"
-  
-USEDISKIDENT (<YES|NO> set to NO by default)
-  This allows devices to be mounted and checked based
-  on their individual identifier instead of the
-  device name allocated to it by the driver.
 
-  example: USEDISKIDENT="YES"
-  
-MOUNTALL (<YES|NO> set to NO by default)
-  Attemps to mount all the partitions found on the
-  device
+MOUNTIDENTIFIER (<NONE|IDENT|LABEL> set to NONE by default)
+  Use this to choose the identifer for how the device is mounted
+  This allows devices to be mounted based on either their:
+  * device name (NONE)  (e.g. da0, da0a)
+  * individual identifier/serial number (IDENT) (e.g. DISK-<serialnumber>)
+  * partition label (LABEL)
 
-  example: MOUNTALL="YES"
-  
+  example: MOUNTIDENTIFIER="LABEL"
+
 EOF
   exit 0
 }
@@ -164,8 +160,7 @@ fi
 : ${TIMEOUT="8"}                      # stop waiting for device after that time
 : ${DELAY="1"}                        # check for the device node that often
 : ${BOOTDELAY="45"}                   # wait for boot process to complete
-: ${USEDISKIDENT}="NO"                # option to use disk ident instead of device identifier
-: ${MOUNTALL} = "YES"                 # attempt to mount all the partitions found on the device
+: ${MOUNTIDENTIFIER}="NONE"           # option to specifiy the source of the mount point identifier
 
 if [ "${USERUMOUNT}" = YES ]
 then
@@ -258,6 +253,7 @@ __wait_for_boot() {  # 1=DEV
   local BOOTTIME=$( sysctl -n kern.boottime | awk -F',' '{print $1}' | awk '{print $NF }' )
   local CURRTIME=$( date +%s )
   local UPTIME=$(( ${CURRTIME} - ${BOOTTIME} ))
+  local WAIT=0
   while [ ${UPTIME} -lt ${BOOTDELAY} ]
   do
     sleep 1
@@ -280,41 +276,51 @@ __random_wait() { # 1=DEV
   __log "${1}: random wait for '${WAIT}' seconds before 'attach' action"
 }
 
-ROOTDEV=""
 
 __wait_for_boot ${1}
 
-if [ "${USEDISKIDENT}" == "YES" ]
-then
-  POTENTIALDEV=/dev/diskid/DISK-$(diskinfo -v ${1} | grep -i "Disk ident" | cut -f 2 -w)
-
-  if [ -e ${POTENTIALDEV} ]
-  then
-    ROOTDEV=${POTENTIALDEV}
-  else
-    __log "${1}: Unable to find serial number. Defaulting to using device as identifier."
-  fi
-fi
-
-if [ "${ROOTDEV}" == "" ]
-then
-  ROOTDEV=/dev/${1}
-fi
-
+ROOTDEV=/dev/${1}
 PARTITIONS=${ROOTDEV}
 
-if [ "${MOUNTALL}" == "YES" ]
-then
-  PARTITIONS=$(ls -1 ${ROOTDEV}*)
-fi
+case ${MOUNTIDENTIFIER} in
+  (IDENT)
+    DISKIDENT=$(diskinfo -v ${ROOTDEV} | grep -i "Disk ident" | cut -f 2 -w)
+  ;;
+  (LABEL)
+    ROOTDISKLABEL=$(glabel status | grep -e "\\<${1}\\>" | cut -f 2 -w | grep -o '[^/]*$')
+  ;;
+esac
+
+PARTITIONS=$(ls -1 ${ROOTDEV}*)
 
 for DEV in ${PARTITIONS}
-do 
+do
   case ${2} in
     (attach)
       __random_wait ${DEV}
       __log "${DEV}: attach"
-      MNTNAME=$( echo ${DEV} | grep -o '[^/]*$' )
+
+      case ${MOUNTIDENTIFIER} in
+        (IDENT)
+          MNTNAME=${DISKIDENT}${DEV#$ROOTDEV}
+        ;;
+        (LABEL)
+          MNTNAME=$(glabel status | grep -e "\\<${DEV#/dev/}\\>" | cut -f 2 -w | grep -o '[^/]*$' | tail -1)
+          if [ "MNTNAME" == "" ]
+          then
+            if [ "ROOTDISKLABEL" != "" ]
+            then
+              MNTNAME=${ROOTDISKLABEL}${DEV#$ROOTDEV}
+            else
+              MNTNAME=$( echo ${DEV} | grep -o '[^/]*$' )
+              __log "${DEV}: unable to find label. Using device identifier instead."
+            fi
+          fi
+        ;;
+        (*)
+          MNTNAME=$( echo ${DEV} | grep -o '[^/]*$' )
+      esac
+
       BLACKLISTED="NO"
       if [ "${BLACKLIST}" != "" ]
         then

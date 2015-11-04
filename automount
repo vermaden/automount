@@ -77,6 +77,10 @@ FM (unset by default)
 
   example: FM="nautilus --browser --no-desktop"
 
+VOLUMENAME (set to NO by default)
+  Try to detect the volume name using the file
+  command and mount the device under this name.
+
 USERUMOUNT (set to NO by default)
   When set to YES it will 'chmod +s /sbin/umount'
   which would allow an USER to unmount the file
@@ -157,6 +161,7 @@ fi
 : ${ENCODING="en_US.ISO8859-1"}       # US/Canada
 : ${CODEPAGE="cp437"}                 # US/Canada
 : ${DATEFMT="%Y-%m-%d %H:%M:%S"}      # 2012-02-20 07:49:09
+: ${VOLUMENAME="NO"}                  # when YES mount on the volume name
 : ${USERUMOUNT="NO"}                  # when YES add suid bit to umount(8)
 : ${ATIME="YES"}                      # when NO mount with noatime
 : ${REMOVEDIRS="NO"}                  # remove empty dirs under ${MNTPREFIX}
@@ -181,6 +186,27 @@ __create_mount_point() { # 1=DEV
   then
     chown ${USER}:$( id -g -n ${USER} ) ${MNT}
   fi
+}
+
+__select_mount_point() { # 1=DEV 2=DEFAULT
+  NAME=$( file -r -b -L -s ${1} | grep -Eo ", volume name [^,]*," | tr -d ',' | sed 's/^ volume name //' )
+
+  if [ "${VOLUMENAME}" = NO -o "${NAME}" = "" ]
+  then
+    echo ${2}
+    return
+  fi
+
+  MNT="${MNTPREFIX}/${NAME}"
+  N=1
+
+  while [ -e "${MNT}" ]
+  do
+    MNT="${MNTPREFIX}/${NAME}.${N}"
+    N=$(( ${N} + 1 ))
+  done
+
+  echo ${MNT}
 }
 
 __state_add() { # 1=DEV 2=PROVIDER 3=MNT
@@ -386,7 +412,7 @@ case ${2} in
       done
     fi
     ADD=0
-    MNT="${MNTPREFIX}/${1}"
+    MNT=$( __select_mount_point ${DEV} "${MNTPREFIX}/${1}" )
     __check_already_mounted -d ${DEV}
     __check_already_mounted -m ${MNT}
     if [ "${ATIME}" = NO ]
@@ -554,13 +580,15 @@ case ${2} in
     __log "${DEV}: detach"
     if [ -f ${STATE} ]
     then
-      grep -E "${MNTPREFIX}/${1}$" ${STATE} \
+      grep -E "^${DEV} " ${STATE} \
         | while read DEV PROVIDER MNT
           do
             TARGET=$( mount | grep -E "^${PROVIDER} " | awk '{print $3}' )
             __state_remove ${DEV} ${PROVIDER} ${MNT}
             if [ -z ${TARGET} ]
             then
+              __remove_dir "${MNT}"
+              __log "${DEV}: mount point '${MNT}' removed"
               continue
             fi
             ( # put entire umount/find/rm block into background
@@ -571,8 +599,6 @@ case ${2} in
             unset TARGET
             __log "${DEV}: umount"
           done
-      __remove_dir "${MNTPREFIX}/${1}"
-      __log "${DEV}: mount point '${MNTPREFIX}/${1}' removed"
     fi
     ;;
 

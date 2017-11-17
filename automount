@@ -180,6 +180,8 @@ __create_mount_point() { # 1=DEV
   if [ "${USER}" != 0 ]
   then
     chown ${USER}:$( id -g -n ${USER} ) ${MNT}
+    UID=$( id -u ${USER} )
+    GID=$( id -g ${USER} )
   fi
 }
 
@@ -423,12 +425,36 @@ case ${2} in
               __log "${DEV}: fsck_msdosfs ${LINE}"
             done
         __wait_for_device ${DEV}
-        if mount_msdosfs ${OPTS} -o large -o longnames -m 644 -M 755 \
-                         -D ${CODEPAGE} -L ${ENCODING} ${DEV} ${MNT}
+        if [ "${USER}" != 0 ]
+        then
+          USEROPTS="-u ${UID} -g ${GID}"
+        else
+          USEROPTS=""
+        fi
+        FATCMD=$( mount_msdosfs ${OPTS} -o large -o longnames -m 644 -M 755 -D ${CODEPAGE} -L ${ENCODING} ${USEROPTS} ${DEV} ${MNT} )
+        if ${FATCMD}
         then
           ADD=1
         else
-          __log "${DEV}: mount failed (fat) 'mount_msdosfs ${OPTS} -o large -o longnames -D ${CODEPAGE} -L ${ENCODING} -m 644 -M 755 ${DEV} ${MNT}'"
+          FATOUT=16
+          FATCUR=0
+          while sleep 1
+          do
+            FATCUR=$(( FATCUR + 1 ))
+            if [ ${FATCUR} -gt ${FATOUT} ]
+            then
+              __log "${DEV}: mount failed (fat) 'mount_msdosfs ${OPTS} -o large -o longnames -D ${CODEPAGE} -L ${ENCODING} -m 644 -M 755 ${USEROPTS} ${DEV} ${MNT}'"
+              break
+            fi
+            FATCMD
+            if [ ${?} -eq 0 ]
+            then
+              ADD=1
+              break
+            else
+              continue
+            fi
+          done
           exit 1
         fi
         __log "${DEV}: mount (fat)"
@@ -524,11 +550,19 @@ case ${2} in
       (EXFAT)
         __create_mount_point ${DEV}
         __wait_for_device ${DEV}
-        if mount.exfat ${OPTS} ${DEV} ${MNT} # sysutils/fusefs-exfat
+        if [ "${USER}" != 0 ]
+        then
+          USEROPTS="-o uid=${UID} -o gid=${GID}"
+        else
+          USEROPTS=""
+        fi
+        # sysutils/fusefs-exfat
+        if mount.exfat ${OPTS} ${USEROPTS} -o dmask=022 -o fmask=133 \
+           -o noatime ${DEV} ${MNT}
         then
           ADD=1
         else
-          __log "${DEV}: mount failed (exfat) 'mount.exfat ${OPTS} ${DEV} ${MNT}'"
+          __log "${DEV}: mount failed (exfat) 'mount.exfat ${OPTS} ${USEROPTS} ${DEV} ${MNT}'"
           exit 1
         fi
         __log "${DEV}: mount (exfat)"
@@ -557,7 +591,7 @@ case ${2} in
       grep -E "${MNTPREFIX}/${1}$" ${STATE} \
         | while read DEV PROVIDER MNT
           do
-            TARGET=$( mount | grep -E "^${PROVIDER} " | awk '{print $3}' )
+            TARGET=$( mount | grep -v \.gvfs | grep -m 1 -E "^${PROVIDER} " | awk '{print $3}' )
             __state_remove ${MNT}
             if [ -z ${TARGET} ]
             then

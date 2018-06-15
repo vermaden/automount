@@ -29,7 +29,7 @@ vermaden
 C  H  A  N  G  E  L  O  G
 =========================
 
-VERSION 1.5.8. (CURRENT)
+VERSION 1.5.8 (CURRENT)
 
 Omit GVFS filesystem in the mount(8) listing.
 Improve exFAT mount options.
@@ -39,7 +39,7 @@ Add version argument.
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.7.
+VERSION 1.5.7
 
 Fix FAT32 mount.
 Add extended options for EXFAT mounts.
@@ -47,46 +47,46 @@ Add -version option.
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.6.
+VERSION 1.5.6
 
 Implement --version option.
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.5.
+VERSION 1.5.5
 
 Rework NTFS/MSDOS/FAT detection. 
 Check for NTFS before FAT. 
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.4.
+VERSION 1.5.4
 
 Added notification via notify-send/libnotify and wall(1). Minor bug fix. 
 Change 'boot sector' detection. 
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.3.
+VERSION 1.5.3
 
 Fix small harmless bug - variable WAIT without default value.
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.2.
+VERSION 1.5.2
 
 Introduce smarter fstype() function to better determine filesystem.
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.1.
+VERSION 1.5.1
 
 Add -k flag to file(1) command.
 Set new --version and date(1). 
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.0.
+VERSION 1.5.0
 
 Add new NTFS options.
 Add nested NTFS mount attempt.
@@ -122,7 +122,7 @@ Implement BLACKLIST option to ignore problematic devices.
 
 -------------------------------------------------------------------------------
 
-VERSION 1.4.1.
+VERSION 1.4.1
 
 Improved checking for already mounted devices.
 More readable log format.

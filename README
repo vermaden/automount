@@ -1,16 +1,140 @@
-automount is a devd(8) based automounter for FreeBSD.
+The 'automount' is a devd(8) based automounter for FreeBSD.
 
 It supports most popular file systems:
-NTFS/MSDOS/exFAT/EXT2/EXT3/EXT4/UFS
+  NTFS/MSDOS/exFAT/EXT2/EXT3/EXT4/UFS
 
-INSTALL:
+-------------------------------------------------------------------------------
 
-# cp automount.sh        /usr/local/sbin/automount.sh
+I  N  S  T  A  L  L
+===================
+
+# cp automount           /usr/local/sbin/automount
 # cp automount.conf      /usr/local/etc/automount.conf
 # cp automount_devd.conf /usr/local/etc/devd/automount_devd.conf
 # /etc/rc.d/devd restart
 
-Now plugin Your USB thumb drive ;)
+Now plugin Your USB thumb drive and have fun ;)
+
+... or just install these FreeBSD Ports/Packages:
+
+* sysutils/automount
+* sysutils/exfat-utils
+* sysutils/fusefs-exfat
+
+Regards,
+vermaden
+
+-------------------------------------------------------------------------------
+
+C  H  A  N  G  E  L  O  G
+=========================
+
+VERSION 1.5.8. (CURRENT)
+
+Omit GVFS filesystem in the mount(8) listing.
+Improve exFAT mount options.
+Add mount_msdosfs(8) fallback fix.
+Set caja as file manager in example config.
+Add version argument.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.7.
+
+Fix FAT32 mount.
+Add extended options for EXFAT mounts.
+Add -version option. 
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.6.
+
+Implement --version option.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.5.
+
+Rework NTFS/MSDOS/FAT detection. 
+Check for NTFS before FAT. 
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.4.
+
+Added notification via notify-send/libnotify and wall(1). Minor bug fix. 
+Change 'boot sector' detection. 
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.3.
+
+Fix small harmless bug - variable WAIT without default value.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.2.
+
+Introduce smarter fstype() function to better determine filesystem.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.1.
+
+Add -k flag to file(1) command.
+Set new --version and date(1). 
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.0.
+
+Add new NTFS options.
+Add nested NTFS mount attempt.
+Fix devd(8) config.
+Improve log messages.
+Use random wait only on ATTACH action, not needed on DETACH action. 
+Implement random wait to eliminate race. 
+Implement BOOTDELAY option to wait for boot process to complete.
+Fix devd(8) config (LARKIND) to match all needed devices and their partitions.
+Fix typo in NTFS error message. 
+
+-------------------------------------------------------------------------------
+
+VERSION 1.4.3
+
+Only style(9) changes.
+Force longnames option for msdosfs.
+Remove -u option for debug. 
+Fix a bug when ATIME is enabled. 
+Add -o remove_hiberfile to NTFS-3G mount options. 
+Fix typo at /var/log/automount.log error message. 
+Use /sbin/e2fsck from FreeBSD base system.
+Fix typo at /var/log/automount.log error message.
+Force longnames option for msdosfs.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.4.2
+
+Implement active sleep/wait for devices that could not appear.
+Add more useful information to /var/log/automount.log file.
+Implement BLACKLIST option to ignore problematic devices.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.4.1.
+
+Improved checking for already mounted devices.
+More readable log format.
+Added logging of fsck(8) output.
+Added adding setuid also to /sbin/mount* when USERUMOUNT set to YES.
+Added error logging of failed mounts.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.4.0
+
+Wait for smartphone to attach device, rewrite all &&-|| into if-then-else-fi syntax.
 
 -------------------------------------------------------------------------------
 

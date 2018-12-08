@@ -1,30 +1,35 @@
 The 'automount' is a devd(8) based automounter for FreeBSD.
 
 It supports most popular file systems:
-  NTFS/MSDOS/exFAT/EXT2/EXT3/EXT4/UFS
+  NTFS/MSDOS/exFAT/EXT2/EXT3/EXT4/UFS/XFS/HFS/MTP
 
 -------------------------------------------------------------------------------
 
 I  N  S  T  A  L  L
 ===================
 
-# cp automount           /usr/local/sbin/automount
+Use provided FreeBSD Ports/packages from here:
+* sysutils/automount
+
+.. or make manual unstallation:
+
 # cp automount.conf      /usr/local/etc/automount.conf
 # cp automount_devd.conf /usr/local/etc/devd/automount_devd.conf
+# cp automount           /usr/local/sbin/automount
+# chmod +x               /usr/local/sbin/automount
 # /etc/rc.d/devd restart
 
 Now plugin Your USB thumb drive and have fun ;)
 
-... or just install these FreeBSD Ports/Packages:
+These Ports/packages are neede for all filesystems:
 
-* sysutils/automount
-* sysutils/exfat-utils
-* sysutils/fusefs-exfat
-* sysutils/fusefs-ntfs
-* sysutils/fusefs-ext4fuse
-* sysutils/fusefs-simple-mtpfs
-* sysutils/fusefs-hfsfuse
-* sysutils/fusefs-lkl
+* sysutils/exfat-utils          // exFAT
+* sysutils/fusefs-exfat         // exFAT
+* sysutils/fusefs-ntfs          // NTFS (read write support)
+* sysutils/fusefs-ext4fuse      // EXT4
+* sysutils/fusefs-simple-mtpfs  // MTP
+* sysutils/fusefs-hfsfuse       // HFS
+* sysutils/fusefs-lkl           // XFS
 
 Regards,
 vermaden
@@ -60,7 +65,7 @@ VERSION 1.5.7
 
 Fix FAT32 mount.
 Add extended options for EXFAT mounts.
-Add -version option. 
+Add -version option.
 
 -------------------------------------------------------------------------------
 
@@ -72,15 +77,15 @@ Implement --version option.
 
 VERSION 1.5.5
 
-Rework NTFS/MSDOS/FAT detection. 
-Check for NTFS before FAT. 
+Rework NTFS/MSDOS/FAT detection.
+Check for NTFS before FAT.
 
 -------------------------------------------------------------------------------
 
 VERSION 1.5.4
 
-Added notification via notify-send/libnotify and wall(1). Minor bug fix. 
-Change 'boot sector' detection. 
+Added notification via notify-send/libnotify and wall(1). Minor bug fix.
+Change 'boot sector' detection.
 
 -------------------------------------------------------------------------------
 
@@ -99,7 +104,7 @@ Introduce smarter fstype() function to better determine filesystem.
 VERSION 1.5.1
 
 Add -k flag to file(1) command.
-Set new --version and date(1). 
+Set new --version and date(1).
 
 -------------------------------------------------------------------------------
 
@@ -109,11 +114,11 @@ Add new NTFS options.
 Add nested NTFS mount attempt.
 Fix devd(8) config.
 Improve log messages.
-Use random wait only on ATTACH action, not needed on DETACH action. 
-Implement random wait to eliminate race. 
+Use random wait only on ATTACH action, not needed on DETACH action.
+Implement random wait to eliminate race.
 Implement BOOTDELAY option to wait for boot process to complete.
 Fix devd(8) config (LARKIND) to match all needed devices and their partitions.
-Fix typo in NTFS error message. 
+Fix typo in NTFS error message.
 
 -------------------------------------------------------------------------------
 
@@ -121,10 +126,10 @@ VERSION 1.4.3
 
 Only style(9) changes.
 Force longnames option for msdosfs.
-Remove -u option for debug. 
-Fix a bug when ATIME is enabled. 
-Add -o remove_hiberfile to NTFS-3G mount options. 
-Fix typo at /var/log/automount.log error message. 
+Remove -u option for debug.
+Fix a bug when ATIME is enabled.
+Add -o remove_hiberfile to NTFS-3G mount options.
+Fix typo at /var/log/automount.log error message.
 Use /sbin/e2fsck from FreeBSD base system.
 Fix typo at /var/log/automount.log error message.
 Force longnames option for msdosfs.

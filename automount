@@ -29,12 +29,15 @@ __usage() {
 AUTOMOUNT is a devd(8) based automounter for FreeBSD.
 
 It supports following file systems:
-UFS/FAT/exFAT/NTFS/EXT2/EXT3/EXT4
+UFS/FAT/exFAT/NTFS/EXT2/EXT3/EXT4/MTP/HFS
 
-It needs these ports to mount NTFS/exFAT/EXT4 respectively:
+Add these to mount NTFS/exFAT/EXT4/MTP/HFS/XFS respectively:
  o sysutils/fusefs-ntfs
  o sysutils/fusefs-exfat
  o sysutils/fusefs-ext4fuse
+ o sysutils/fusefs-simple-mtpfs
+ o sysutils/fusefs-hfsfuse
+ o sysutils/fusefs-lkl
 
 By default it mounts/unmounts all removable media but
 it is possible to set some additional options at the
@@ -137,7 +140,7 @@ EOF
 
 if [ "${1}" = "--version" -o "${1}" = "-version" -o "${1}" = "version" ]
 then
-  echo "automount 1.5.8 2018/06/13"
+  echo "automount 1.5.9 2018/12/08"
   exit 0
 fi
 
@@ -163,7 +166,7 @@ fi
 : ${USER="0"}                         # which user to use for popup
 : ${FM="0"}                           # which file manager to use
 : ${TIMEOUT="8"}                      # stop waiting for device after that time
-: ${DELAY="1"}                        # check for the device node that often
+: ${DELAY="0.1"}                      # check for the device node that often
 : ${BOOTDELAY="45"}                   # wait for boot process to complete
 : ${NOTIFY="NO"}                      # use 'notify-send' and 'libnotify'
 : ${WALL="NO"}                        # use 'wall(1)'
@@ -176,12 +179,16 @@ then
 fi
 
 __create_mount_point() { # 1=DEV
-  mkdir -p ${MNT}
+  local DEVICE=${1##*/}
+  mkdir -p ${MNTPREFIX}/${DEVICE}
   if [ "${USER}" != 0 ]
   then
-    chown ${USER}:$( id -g -n ${USER} ) ${MNT}
+    chown ${USER}:$( id -g -n ${USER} ) ${MNTPREFIX}/${DEVICE}
     UID=$( id -u ${USER} )
     GID=$( id -g ${USER} )
+  else
+    UID=0
+    GID=0
   fi
 }
 
@@ -291,19 +298,19 @@ __wait_for_boot() {
   fi
 }
 
-__random_wait() {
-  RANDOM=$( head -c 256 /dev/urandom | env LC_ALL=C tr -c -d '1-9' )
-  MODULO=$(( ${RANDOM} % 24 ))
-  WAIT=$( echo ${MODULO} / 10 | bc -l )
-  WAIT_TEST=$( echo ${WAIT} | awk -F'.' '{print $1}' )
-  if [ "${WAIT_TEST}" = "" ]
-  then
-    WAIT="0${WAIT}"
-  fi
-  WAIT=$( printf "%.1f" ${WAIT} )
-  sleep ${WAIT}
-  __log "${DEV}: random wait for '${WAIT}' seconds before 'attach' action"
-}
+# __random_wait() {
+#   RANDOM=$( head -c 256 /dev/urandom | env LC_ALL=C tr -c -d '1-9' )
+#   MODULO=$(( ${RANDOM} % 24 ))
+#   WAIT=$( echo ${MODULO} / 10 | bc -l )
+#   WAIT_TEST=$( echo ${WAIT} | awk -F'.' '{print $1}' )
+#   if [ "${WAIT_TEST}" = "" ]
+#   then
+#     WAIT="0${WAIT}"
+#   fi
+#   WAIT=$( printf "%.1f" ${WAIT} )
+#   sleep ${WAIT}
+#   __log "${DEV}: random wait for '${WAIT}' seconds before 'attach' action"
+# }
 
 __fstype() { # 1=DEV
   TYPE=$( dd < ${DEV} count=1 2> /dev/null | strings | head -1 )
@@ -332,6 +339,16 @@ __fstype() { # 1=DEV
   if echo "${TYPE}" | grep -q 'ext4'
   then
     TYPE=EXT4
+    return
+  fi
+  if echo "${TYPE}" | grep -q 'SGI XFS'
+  then
+    TYPE=XFS
+    return
+  fi
+  if echo "${TYPE}" | grep -q 'Macintosh HFS'
+  then
+    TYPE=HFS
     return
   fi
   if echo "${TYPE}" | grep -q 'boot sector'
@@ -368,246 +385,374 @@ __fstype() { # 1=DEV
 }
 
 DEV=/dev/${1}
-
 __wait_for_boot
+case ${1} in
 
-case ${2} in
-  (attach)
-    __random_wait
-    __log "${DEV}: attach"
-    if [ "${BLACKLIST}" != "" ]
-      then
-      __log "${DEV}: using BLACKLIST='${BLACKLIST}'"
-      for I in ${BLACKLIST}
-      do
-        if [ ${1} = "${I}" ]
-        then
-          __log "${DEV}: device blocked by BLACKLIST option"
-          exit 0
-        fi
-      done
-    fi
-    ADD=0
-    MNT="${MNTPREFIX}/${1}"
-    __check_already_mounted -d ${DEV}
-    __check_already_mounted -m ${MNT}
-    if [ "${ATIME}" = NO ]
-    then
-      OPTS="-o noatime"
-    fi
-    __wait_for_device ${DEV}
-    __fstype ${DEV}
-    case ${TYPE} in
-      (UFS)
-        __create_mount_point ${DEV}
-        __wait_for_device ${DEV}
-        fsck_ufs -C -y ${DEV} \
-          | while read LINE
-            do
-              __log "${DEV}: fsck_ufs ${LINE}"
-            done
-        __wait_for_device ${DEV}
-        if mount -t ufs ${OPTS} ${DEV} ${MNT}
-        then
-          ADD=1
-        else
-          __log "${DEV}: mount failed (ufs) 'mount -t ufs ${OPTS} ${DEV} ${MNT}'"
-          exit 1
-        fi
-        __log "${DEV}: mount (ufs)"
-        ;;
-      (FAT) # must be before NTFS section because: newfs_msdos -O NTFS -L NTFS
-        __create_mount_point ${DEV}
-        __wait_for_device ${DEV}
-        fsck_msdosfs -C -y ${DEV} \
-          | while read LINE
-            do
-              __log "${DEV}: fsck_msdosfs ${LINE}"
-            done
-        __wait_for_device ${DEV}
-        if [ "${USER}" != 0 ]
-        then
-          USEROPTS="-u ${UID} -g ${GID}"
-        else
-          USEROPTS=""
-        fi
-        FATCMD=$( mount_msdosfs ${OPTS} -o large -o longnames -m 644 -M 755 -D ${CODEPAGE} -L ${ENCODING} ${USEROPTS} ${DEV} ${MNT} )
-        if ${FATCMD}
-        then
-          ADD=1
-        else
-          FATOUT=16
-          FATCUR=0
-          while sleep 1
+  (ugen*)
+    case ${2} in
+
+      (attach)
+#       __random_wait
+        __log "${DEV}: attach"
+        if [ "${BLACKLIST}" != "" ]
+          then
+          __log "${DEV}: using BLACKLIST='${BLACKLIST}'"
+          for I in ${BLACKLIST}
           do
-            FATCUR=$(( FATCUR + 1 ))
-            if [ ${FATCUR} -gt ${FATOUT} ]
+            if [ ${1} = "${I}" ]
             then
-              __log "${DEV}: mount failed (fat) 'mount_msdosfs ${OPTS} -o large -o longnames -D ${CODEPAGE} -L ${ENCODING} -m 644 -M 755 ${USEROPTS} ${DEV} ${MNT}'"
-              break
-            fi
-            FATCMD
-            if [ ${?} -eq 0 ]
-            then
-              ADD=1
-              break
-            else
-              continue
+              __log "${DEV}: device blocked by BLACKLIST option"
+              exit 0
             fi
           done
-          exit 1
         fi
-        __log "${DEV}: mount (fat)"
-        ;;
-      (NTFS) # must be after FAT section: newfs_msdos -O NTFS -L NTFS
-        __create_mount_point ${DEV}
+        ADD=0
+        MNT="${MNTPREFIX}/${1}"
+        __check_already_mounted -d ${DEV}
+        __check_already_mounted -m ${MNT}
         __wait_for_device ${DEV}
-        if which ntfs-3g 1> /dev/null 2> /dev/null # sysutils/fusefs-ntfs
+        PHONEDEV=$( simple-mtpfs --list-devices -d ${DEV} 2>&1 )
+        if [ "${PHONEDEV}" = "No raw devices found." ]
         then
-          __wait_for_device ${DEV}
-          if ntfs-3g -o recover -o remove_hiberfile ${OPTS} ${DEV} ${MNT}
-          then
-            ADD=1
-          else
-            # make nested mount try because sometimes second mount works
-            if ntfs-3g -o recover -o remove_hiberfile ${OPTS} ${DEV} ${MNT}
-            then
-              ADD=1
-            else
-              __log "${DEV}: mount failed (ntfs) 'ntfs-3g ${OPTS} ${DEV} ${MNT}'"
-              exit 1
-            fi
-          fi
+          __log "${DEV}: no raw devices found"
+          exit 0
         else
-          if ! [ "${USER}" = 0 ]
+          PHONEDEV=$( echo "${PHONEDEV}" | awk '{print $1}' | tr -d ':' )
+        fi
+        __create_mount_point ${DEV}
+        simple-mtpfs --device ${PHONEDEV} ${MNT} -o uid=${UID} -o gid=${GID} -o allow_other
+        if [ ${?} -ne 0 ]
+        then
+          su - ${USER} -c "env DISPLAY=:0 zenity --info --text 'Allow on the Phone.\n\nThen click OK.' --no-wrap"
+          exit 0
+        else
+          # simple-mtpfs --device ${PHONEDEV} ${MNT} -o uid=${UID} -o gid=${GID} -o allow_other
+          PROVIDER=$( mount | grep -m 1 " ${MNT} " | awk '{printf $1}' )
+          __state_add ${DEV} ${PROVIDER} ${MNT}
+          if [ "${USER}" != 0 -a "${FM}" != 0 ]
           then
-            OPTS="${OPTS} -u ${USER} -g $( id -g -n ${USER} )"
-          fi
-          if mount_ntfs ${OPTS} ${DEV} ${MNT}
-          then
-            ADD=1
-          else
-            __log "${DEV}: mount failed (ntfs) 'mount_ntfs ${OPTS} ${DEV} ${MNT}'"
-            exit 1
+            su - ${USER} -c "env DISPLAY=:0 ${FM} ${MNT} &"
           fi
         fi
-        __log "${DEV}: mount (ntfs)"
         ;;
-      (EXT2)
-        __create_mount_point ${DEV}
-        __wait_for_device ${DEV}
-        e2fsck -y ${DEV} \
-          | while read LINE
-            do
-              __log "${DEV}: fsck.ext2 ${LINE}"
-            done
-        __wait_for_device ${DEV}
-        if mount -t ext2fs ${OPTS} ${DEV} ${MNT}
+
+      (detach)
+        __log "${DEV}: detach"
+        if [ -f ${STATE} ]
         then
-          ADD=1
-        else
-          __log "${DEV}: mount failed (ext2) 'mount -t ext2fs ${OPTS} ${DEV} ${MNT}'"
-          exit 1
+          grep -E "${MNTPREFIX}/${1}$" ${STATE} \
+            | while read DEV PROVIDER MNT
+              do
+                TARGET=$( mount | grep -v \.gvfs | grep -m 1 -E "^${PROVIDER} " | awk '{print $3}' )
+                __state_remove ${MNT}
+                if [ -z ${TARGET} ]
+                then
+                  continue
+                fi
+                ( # put entire umount/find/rm block into background
+                  umount -f ${TARGET}
+                  __remove_dir "${TARGET}"
+                  __log "${DEV}: removed '${TARGET}'"
+                ) &
+                unset TARGET
+                __log "${DEV}: umount"
+              done
+          __remove_dir "${MNTPREFIX}/${1}"
+          __log "${DEV}: mount point '${MNTPREFIX}/${1}' removed"
         fi
-        __log "${DEV}: mount (ext2)"
         ;;
-      (EXT3)
-        __create_mount_point ${DEV}
-        __wait_for_device ${DEV}
-        e2fsck -y ${DEV} \
-          | while read LINE
-            do
-              __log "${DEV}: fsck.ext3 ${LINE}"
-            done
-        __wait_for_device ${DEV}
-        if mount -t ext2fs ${OPTS} ${DEV} ${MNT}
-        then
-          ADD=1
-        else
-          __log "${DEV}: mount failed (ext3) 'mount -t ext2fs ${OPTS} ${DEV} ${MNT}'"
-          exit 1
-        fi
-        __log "${DEV}: mount (ext3)"
-        ;;
-      (EXT4)
-        __create_mount_point ${DEV}
-        __wait_for_device ${DEV}
-        e2fsck -y ${DEV} \
-          | while read LINE
-            do
-              __log "${DEV}: fsck.ext4 ${LINE}"
-            done
-        __wait_for_device ${DEV}
-        if ext4fuse ${DEV} ${MNT} # sysutils/fusefs-ext4fuse
-        then
-          ADD=1
-        else
-          __log "${DEV}: mount failed (ext4) 'ext4fuse ${DEV} ${MNT}'"
-          exit 1
-        fi
-        __log "${DEV}: mount (ext4)"
-        ;;
-      (EXFAT)
-        __create_mount_point ${DEV}
-        __wait_for_device ${DEV}
-        if [ "${USER}" != 0 ]
-        then
-          USEROPTS="-o uid=${UID} -o gid=${GID}"
-        else
-          USEROPTS=""
-        fi
-        # sysutils/fusefs-exfat
-        if mount.exfat ${OPTS} ${USEROPTS} -o dmask=022 -o fmask=133 \
-           -o noatime ${DEV} ${MNT}
-        then
-          ADD=1
-        else
-          __log "${DEV}: mount failed (exfat) 'mount.exfat ${OPTS} ${USEROPTS} ${DEV} ${MNT}'"
-          exit 1
-        fi
-        __log "${DEV}: mount (exfat)"
-        ;;
-      (*)
-        __log "${DEV}: filesystem not supported or no filesystem"
-        exit 0
-        ;;
+
     esac
-    if [ ${ADD} -eq 1 ]
-    then
-      ADD=0
-      PROVIDER=$( mount | grep -m 1 " ${MNT} " | awk '{printf $1}' )
-      __state_add ${DEV} ${PROVIDER} ${MNT}
-      if [ "${USER}" != 0 -a "${FM}" != 0 ]
-      then
-        su - ${USER} -c "env DISPLAY=:0 ${FM} ${MNT} &"
-      fi
-    fi
     ;;
 
-  (detach)
-    __log "${DEV}: detach"
-    if [ -f ${STATE} ]
-    then
-      grep -E "${MNTPREFIX}/${1}$" ${STATE} \
-        | while read DEV PROVIDER MNT
+  (da*|mmcsd*)
+    case ${2} in
+
+      (attach)
+#       __random_wait
+        __log "${DEV}: attach"
+        if [ "${BLACKLIST}" != "" ]
+          then
+          __log "${DEV}: using BLACKLIST='${BLACKLIST}'"
+          for I in ${BLACKLIST}
           do
-            TARGET=$( mount | grep -v \.gvfs | grep -m 1 -E "^${PROVIDER} " | awk '{print $3}' )
-            __state_remove ${MNT}
-            if [ -z ${TARGET} ]
+            if [ ${1} = "${I}" ]
             then
-              continue
+              __log "${DEV}: device blocked by BLACKLIST option"
+              exit 0
             fi
-            ( # put entire umount/find/rm block into background
-              umount -f ${TARGET}
-              __remove_dir "${TARGET}"
-              __log "${DEV}: removed '${TARGET}'"
-            ) &
-            unset TARGET
-            __log "${DEV}: umount"
           done
-      __remove_dir "${MNTPREFIX}/${1}"
-      __log "${DEV}: mount point '${MNTPREFIX}/${1}' removed"
-    fi
+        fi
+        ADD=0
+        MNT="${MNTPREFIX}/${1}"
+        __check_already_mounted -d ${DEV}
+        __check_already_mounted -m ${MNT}
+        if [ "${ATIME}" = NO ]
+        then
+          OPTS="-o noatime"
+        fi
+        __wait_for_device ${DEV}
+        __fstype ${DEV}
+        case ${TYPE} in
+
+          (UFS)
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            fsck_ufs -C -y ${DEV} \
+              | while read LINE
+                do
+                  __log "${DEV}: fsck_ufs ${LINE}"
+                done
+            __wait_for_device ${DEV}
+            if mount -t ufs ${OPTS} ${DEV} ${MNT}
+            then
+              ADD=1
+            else
+              __log "${DEV}: mount failed (ufs) 'mount -t ufs ${OPTS} ${DEV} ${MNT}'"
+              exit 1
+            fi
+            __log "${DEV}: mount (ufs) 'mount -t ufs ${OPTS} ${DEV} ${MNT}'"
+            ;;
+
+          (FAT) # must be before NTFS section because: newfs_msdos -O NTFS -L NTFS
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            fsck_msdosfs -C -y ${DEV} \
+              | while read LINE
+                do
+                  __log "${DEV}: fsck_msdosfs ${LINE}"
+                done
+            __wait_for_device ${DEV}
+            if [ "${USER}" != 0 ]
+            then
+              USEROPTS="-u ${UID} -g ${GID}"
+            else
+              USEROPTS=""
+            fi
+            FATCMD="mount_msdosfs ${OPTS} -o longnames -m 644 -M 755 -D ${CODEPAGE} -L ${ENCODING} ${USEROPTS} ${DEV} ${MNT}"
+            if ${FATCMD}
+            then
+              ADD=1
+            else
+              FATOUT=16
+              FATCUR=0
+              while sleep 1
+              do
+                FATCUR=$(( ${FATCUR} + 1 ))
+                if [ ${FATCUR} -gt ${FATOUT} ]
+                then
+                  __log "${DEV}: mount failed (fat) '${FATCMD}'"
+                  break
+                fi
+                ${FATCMD}
+                if [ ${?} -eq 0 ]
+                then
+                  ADD=1
+                  break
+                else
+                  continue
+                fi
+              done
+              exit 1
+            fi
+            if [ ${ADD} -eq 1 ]
+            then
+              __log "${DEV}: mount (fat) '${FATCMD}'"
+            else
+              __log "${DEV}: mount failed (fat) '${FATCMD}'"
+            fi
+            ;;
+
+          (NTFS) # must be after FAT section: newfs_msdos -O NTFS -L NTFS
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            if which ntfs-3g 1> /dev/null 2> /dev/null # sysutils/fusefs-ntfs
+            then
+              __wait_for_device ${DEV}
+              if ntfs-3g -o recover -o remove_hiberfile ${OPTS} ${DEV} ${MNT}
+              then
+                ADD=1
+              else
+                # make nested mount try because sometimes second mount works
+                if ntfs-3g -o recover -o remove_hiberfile ${OPTS} ${DEV} ${MNT}
+                then
+                  ADD=1
+                else
+                  __log "${DEV}: mount failed (ntfs) 'ntfs-3g ${OPTS} ${DEV} ${MNT}'"
+                  exit 1
+                fi
+              fi
+            else
+              if ! [ "${USER}" = 0 ]
+              then
+                OPTS="${OPTS} -u ${USER} -g $( id -g -n ${USER} )"
+              fi
+              if mount_ntfs ${OPTS} ${DEV} ${MNT}
+              then
+                ADD=1
+              else
+                __log "${DEV}: mount failed (ntfs) 'mount_ntfs ${OPTS} ${DEV} ${MNT}'"
+                exit 1
+              fi
+            fi
+            __log "${DEV}: mount (ntfs) 'mount_ntfs ${OPTS} ${DEV} ${MNT}'"
+            ;;
+
+          (EXT2)
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            e2fsck -y ${DEV} \
+              | while read LINE
+                do
+                  __log "${DEV}: fsck.ext2 ${LINE}"
+                done
+            __wait_for_device ${DEV}
+            if mount -t ext2fs ${OPTS} ${DEV} ${MNT}
+            then
+              ADD=1
+            else
+              __log "${DEV}: mount failed (ext2) 'mount -t ext2fs ${OPTS} ${DEV} ${MNT}'"
+              exit 1
+            fi
+            __log "${DEV}: mount (ext2) 'mount -t ext2fs ${OPTS} ${DEV} ${MNT}'"
+            ;;
+
+          (EXT3)
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            e2fsck -y ${DEV} \
+              | while read LINE
+                do
+                  __log "${DEV}: fsck.ext3 ${LINE}"
+                done
+            __wait_for_device ${DEV}
+            if mount -t ext2fs ${OPTS} ${DEV} ${MNT}
+            then
+              ADD=1
+            else
+              __log "${DEV}: mount failed (ext3) 'mount -t ext2fs ${OPTS} ${DEV} ${MNT}'"
+              exit 1
+            fi
+            __log "${DEV}: mount (ext3) 'mount -t ext2fs ${OPTS} ${DEV} ${MNT}'"
+            ;;
+
+          (EXT4)
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            e2fsck -y ${DEV} \
+              | while read LINE
+                do
+                  __log "${DEV}: fsck.ext4 ${LINE}"
+                done
+            __wait_for_device ${DEV}
+            if ext4fuse ${DEV} ${MNT} # sysutils/fusefs-ext4fuse
+            then
+              ADD=1
+            else
+              __log "${DEV}: mount failed (ext4) 'ext4fuse ${DEV} ${MNT}'"
+              exit 1
+            fi
+            __log "${DEV}: mount (ext4) 'ext4fuse ${DEV} ${MNT}'"
+            ;;
+
+          (EXFAT)
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            if [ "${USER}" != 0 ]
+            then
+              USEROPTS="-o uid=${UID} -o gid=${GID}"
+            else
+              USEROPTS=""
+            fi
+            # sysutils/fusefs-exfat
+            if mount.exfat ${OPTS} ${USEROPTS} -o dmask=022 -o fmask=133 \
+               -o noatime ${DEV} ${MNT}
+            then
+              ADD=1
+            else
+              __log "${DEV}: mount failed (exfat) 'mount.exfat ${OPTS} ${USEROPTS} -o dmask=022 -o fmask=133 -o noatime ${DEV} ${MNT}'"
+              exit 1
+            fi
+            __log "${DEV}: mount (exfat) 'mount.exfat ${OPTS} ${USEROPTS} -o dmask=022 -o fmask=133 -o noatime ${DEV} ${MNT}'"
+            ;;
+
+          (XFS)
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            xfs_repair -d ${DEV} \
+              | while read LINE
+                do
+                  __log "${DEV}: xfs_repair ${LINE}"
+                done
+            __wait_for_device ${DEV}
+            if lklfuse -o type=xfs -o allow_other -o uid=${UID} -o gid=${GID} ${DEV} ${MNT} # sysutils/fusefs-lkl
+            then
+              ADD=1
+            else
+              __log "${DEV}: mount failed (xfs) 'lklfuse -o type=xfs -o allow_other -o uid=${UID} -o gid=${GID} ${DEV} ${MNT}'"
+              exit 1
+            fi
+            __log "${DEV}: mount (xfs) 'lklfuse -o type=xfs -o allow_other -o uid=${UID} -o gid=${GID} ${DEV} ${MNT}'"
+            ;;
+
+          (HFS)
+            __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            if hfsfuse --force -o noatime ${DEV} ${MNT} # sysutils/fusefs-hfsfuse
+            then
+              ADD=1
+            else
+              __log "${DEV}: mount failed (hfs) 'hfsfuse --force -o noatime ${DEV} ${MNT}'"
+              exit 1
+            fi
+            __log "${DEV}: mount (hfs) 'hfsfuse --force -o noatime ${DEV} ${MNT}'"
+            ;;
+
+          (*)
+            __log "${DEV}: filesystem not supported or no filesystem"
+            exit 0
+            ;;
+
+        esac
+        if [ ${ADD} -eq 1 ]
+        then
+          ADD=0
+          PROVIDER=$( mount | grep -m 1 " ${MNT} " | awk '{printf $1}' )
+          __state_add ${DEV} ${PROVIDER} ${MNT}
+          if [ "${USER}" != 0 -a "${FM}" != 0 ]
+          then
+            su - ${USER} -c "env DISPLAY=:0 ${FM} ${MNT} &"
+          fi
+        fi
+        ;;
+
+      (detach)
+        __log "${DEV}: detach"
+        if [ -f ${STATE} ]
+        then
+          grep -E "${MNTPREFIX}/${1}$" ${STATE} \
+            | while read DEV PROVIDER MNT
+              do
+                TARGET=$( mount | grep -v \.gvfs | grep -m 1 -E "^${PROVIDER} " | awk '{print $3}' )
+                __state_remove ${MNT}
+                if [ -z ${TARGET} ]
+                then
+                  continue
+                fi
+                ( # put entire umount/find/rm block into background
+                  umount -f ${TARGET}
+                  __remove_dir "${TARGET}"
+                  __log "${DEV}: removed '${TARGET}'"
+                ) &
+                unset TARGET
+                __log "${DEV}: umount"
+              done
+          __remove_dir "${MNTPREFIX}/${1}"
+          __log "${DEV}: mount point '${MNTPREFIX}/${1}' removed"
+        fi
+        ;;
+
+    esac
     ;;
 
 esac

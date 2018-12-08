@@ -20,6 +20,11 @@ Now plugin Your USB thumb drive and have fun ;)
 * sysutils/automount
 * sysutils/exfat-utils
 * sysutils/fusefs-exfat
+* sysutils/fusefs-ntfs
+* sysutils/fusefs-ext4fuse
+* sysutils/fusefs-simple-mtpfs
+* sysutils/fusefs-hfsfuse
+* sysutils/fusefs-lkl
 
 Regards,
 vermaden
@@ -29,7 +34,19 @@ vermaden
 C  H  A  N  G  E  L  O  G
 =========================
 
-VERSION 1.5.8 (CURRENT)
+-------------------------------------------------------------------------------
+
+VERSION 1.5.9 (CURRENT)
+
+Decreese DELAY for sleep from '1' to '0.1' for faster monting.
+Remove __random_wait() at 'attach'.
+Implement MTP mounting.
+Added XFS and HFS support.
+Various fixes and cleanups.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.8
 
 Omit GVFS filesystem in the mount(8) listing.
 Improve exFAT mount options.

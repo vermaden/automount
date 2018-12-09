@@ -42,9 +42,15 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.5.9 (CURRENT)
+VERSION 1.6.0 (CURRENT)
 
-Decreese DELAY for sleep from '1' to '0.1' for faster monting.
+Fix long boot with devd(8) because of ugen(4) devices.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.5.9
+
+Decrease DELAY for sleep from '1' to '0.1' for faster mounting.
 Remove __random_wait() at 'attach'.
 Implement MTP mounting.
 Added XFS and HFS support.

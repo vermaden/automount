@@ -27,9 +27,10 @@ These Ports/packages are neede for all filesystems:
 * sysutils/fusefs-exfat         // exFAT
 * sysutils/fusefs-ntfs          // NTFS (read write support)
 * sysutils/fusefs-ext4fuse      // EXT4
-* sysutils/fusefs-simple-mtpfs  // MTP
 * sysutils/fusefs-hfsfuse       // HFS
 * sysutils/fusefs-lkl           // XFS
+* sysutils/fusefs-simple-mtpfs  // MTP
+* x11/zenity                    // MTP
 
 Regards,
 vermaden

@@ -39,13 +39,14 @@ AUTOMOUNT is a devd(8) based automounter for FreeBSD.
 It supports following file systems:
 UFS/FAT/exFAT/NTFS/EXT2/EXT3/EXT4/MTP/HFS
 
-Add these to mount NTFS/exFAT/EXT4/MTP/HFS/XFS respectively:
+Add these to mount NTFS/exFAT/EXT4/HFS/XFS/MTP respectively:
  o sysutils/fusefs-ntfs
  o sysutils/fusefs-exfat
  o sysutils/fusefs-ext4fuse
- o sysutils/fusefs-simple-mtpfs
  o sysutils/fusefs-hfsfuse
  o sysutils/fusefs-lkl
+ o sysutils/fusefs-simple-mtpfs
+ o x11/zenity
 
 By default it mounts/unmounts all removable media but
 it is possible to set some additional options at the
@@ -123,11 +124,6 @@ DELAY (set to 1 second by default)
 
   example: DELAY="2.5"
 
-BOOTDELAY (set to 45 seconds by default)
-  How long to wait for boot process to complete.
-
-  example: BOOTDELAY="30"
-
 NOTIFY (set to NO by default)
   Use 'notify-send' and 'libnotify' to show notifications
   of mounting and unmounting devices on the desktop.
@@ -175,7 +171,6 @@ fi
 : ${FM="0"}                           # which file manager to use
 : ${TIMEOUT="8"}                      # stop waiting for device after that time
 : ${DELAY="0.1"}                      # check for the device node that often
-: ${BOOTDELAY="45"}                   # wait for boot process to complete
 : ${NOTIFY="NO"}                      # use 'notify-send' and 'libnotify'
 : ${WALL="NO"}                        # use 'wall(1)'
 
@@ -288,38 +283,6 @@ __wait_for_device() { # 1=DEV
   done
 }
 
-__wait_for_boot() {
-  local BOOTTIME=$( sysctl -n kern.boottime | awk -F',' '{print $1}' | awk '{print $NF }' )
-  local CURRTIME=$( date +%s )
-  local UPTIME=$(( ${CURRTIME} - ${BOOTTIME} ))
-  local WAIT=0
-  while [ ${UPTIME} -lt ${BOOTDELAY} ]
-  do
-    sleep 1
-    local WAIT=1
-    local CURRTIME=$( date +%s )
-    local UPTIME=$(( ${CURRTIME} - ${BOOTTIME} ))
-  done
-  if [ ${WAIT} -eq 1 ]
-  then
-    __log "${DEV}: done waiting '${BOOTDELAY}' seconds for boot process to complete"
-  fi
-}
-
-# __random_wait() {
-#   RANDOM=$( head -c 256 /dev/urandom | env LC_ALL=C tr -c -d '1-9' )
-#   MODULO=$(( ${RANDOM} % 24 ))
-#   WAIT=$( echo ${MODULO} / 10 | bc -l )
-#   WAIT_TEST=$( echo ${WAIT} | awk -F'.' '{print $1}' )
-#   if [ "${WAIT_TEST}" = "" ]
-#   then
-#     WAIT="0${WAIT}"
-#   fi
-#   WAIT=$( printf "%.1f" ${WAIT} )
-#   sleep ${WAIT}
-#   __log "${DEV}: random wait for '${WAIT}' seconds before 'attach' action"
-# }
-
 __fstype() { # 1=DEV
   TYPE=$( dd < ${DEV} count=1 2> /dev/null | strings | head -1 )
   if echo "${TYPE}" | grep -q 'EXFAT'
@@ -393,14 +356,12 @@ __fstype() { # 1=DEV
 }
 
 DEV=/dev/${1}
-__wait_for_boot
 case ${1} in
 
   (ugen*)
     case ${2} in
 
       (attach)
-#       __random_wait
         __log "${DEV}: attach"
         if [ "${BLACKLIST}" != "" ]
           then
@@ -434,7 +395,6 @@ case ${1} in
           su - ${USER} -c "env DISPLAY=:0 zenity --info --text 'Allow on the Phone.\n\nThen click OK.' --no-wrap"
           exit 0
         else
-          # simple-mtpfs --device ${PHONEDEV} ${MNT} -o uid=${UID} -o gid=${GID} -o allow_other
           PROVIDER=$( mount | grep -m 1 " ${MNT} " | awk '{printf $1}' )
           __state_add ${DEV} ${PROVIDER} ${MNT}
           if [ "${USER}" != 0 -a "${FM}" != 0 ]
@@ -477,7 +437,6 @@ case ${1} in
     case ${2} in
 
       (attach)
-#       __random_wait
         __log "${DEV}: attach"
         if [ "${BLACKLIST}" != "" ]
           then

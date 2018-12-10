@@ -45,6 +45,10 @@ C  H  A  N  G  E  L  O  G
 VERSION 1.6.0 (CURRENT)
 
 Fix long boot with devd(8) because of ugen(4) devices.
+Add fsck.exfat to the exFAT filesystem.
+Set fsck.ext2 instead of e2fsck to the ext2 filesystem.
+Set fsck.ext3 instead of e2fsck to the ext3 filesystem.
+Set fsck.ext4 instead of e2fsck to the ext4 filesystem.
 
 -------------------------------------------------------------------------------
 

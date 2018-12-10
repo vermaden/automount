@@ -568,7 +568,7 @@ case ${1} in
           (EXT2)
             __create_mount_point ${DEV}
             __wait_for_device ${DEV}
-            e2fsck -y ${DEV} \
+            fsck.ext2 -y ${DEV} \
               | while read LINE
                 do
                   __log "${DEV}: fsck.ext2 ${LINE}"
@@ -587,7 +587,7 @@ case ${1} in
           (EXT3)
             __create_mount_point ${DEV}
             __wait_for_device ${DEV}
-            e2fsck -y ${DEV} \
+            fsck.ext3 -y ${DEV} \
               | while read LINE
                 do
                   __log "${DEV}: fsck.ext3 ${LINE}"
@@ -606,7 +606,7 @@ case ${1} in
           (EXT4)
             __create_mount_point ${DEV}
             __wait_for_device ${DEV}
-            e2fsck -y ${DEV} \
+            fsck.ext4 -y ${DEV} \
               | while read LINE
                 do
                   __log "${DEV}: fsck.ext4 ${LINE}"
@@ -624,6 +624,12 @@ case ${1} in
 
           (EXFAT)
             __create_mount_point ${DEV}
+            __wait_for_device ${DEV}
+            fsck.exfat ${DEV} \
+              | while read LINE
+                do
+                  __log "${DEV}: fsck.exfat ${LINE}"
+                done
             __wait_for_device ${DEV}
             if [ "${USER}" != 0 ]
             then

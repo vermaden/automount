@@ -42,7 +42,13 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.6.0 (CURRENT)
+VERSION 1.6.1 (CURRENT)
+
+Fix MBR/msdosfs partition unmount issue.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.6.0
 
 Fix long boot with devd(8) because of ugen(4) devices.
 Add fsck.exfat to the exFAT filesystem.

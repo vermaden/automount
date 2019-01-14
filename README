@@ -65,6 +65,7 @@ Remove __random_wait() at 'attach'.
 Implement MTP mounting.
 Added XFS and HFS support.
 Various fixes and cleanups.
+Remove '-o large' option for FAT (not supported on FreeBSD 12).
 
 -------------------------------------------------------------------------------
 

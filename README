@@ -1,7 +1,7 @@
 The 'automount' is a devd(8) based automounter for FreeBSD.
 
 It supports most popular file systems:
-  NTFS/MSDOS/exFAT/EXT2/EXT3/EXT4/UFS/XFS/HFS/MTP
+  NTFS/MSDOS/exFAT/EXT2/EXT3/EXT4/UFS/XFS/HFS/MTP/ISO9660
 
 -------------------------------------------------------------------------------
 
@@ -30,7 +30,6 @@ These Ports/packages are neede for all filesystems:
 * sysutils/fusefs-hfsfuse       // HFS
 * sysutils/fusefs-lkl           // XFS
 * sysutils/fusefs-simple-mtpfs  // MTP
-* x11/zenity                    // MTP
 
 Regards,
 vermaden
@@ -42,7 +41,23 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.6.1 (CURRENT)
+VERSION 1.7.0 (CURRENT)
+
+The automount has now a new co-author - Rozhuk Ivan.
+New options available in automount.conf config file.
+Filesystem detection/mounting reworked totally with file(1)/dd(1)/fstyp(8) as backends.
+Notifications are now possible with libnitify(8) library.
+Automatic detection of DISPLAY variable.
+New automatic wait for device appearance.
+New detection if device is a block device.
+Introduction of CD-ROM support.
+Automatic detection of File Manager with exo-open(1).
+Option REMOVEDIRS is deprecated now.
+Handle '-o large' option for FAT under FreeBSD 11.x and 12.x versions.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.6.1
 
 Fix MBR/msdosfs partition unmount issue.
 

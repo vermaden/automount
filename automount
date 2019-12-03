@@ -144,7 +144,7 @@ if [ "${1}" = '--version' -o \
      "${1}" = 'version'   -o \
      "${1}" = '-v' ]
 then
-  echo "automount 1.7.0 2019/08/28"
+  echo "automount 1.7.1 2019/12/03"
   exit 0
 fi
 
@@ -181,7 +181,7 @@ fi
 : ${LOG_FILE='/var/log/automount.log'}  # log file
 : ${LOG_DATEFMT='%Y-%m-%d %H:%M:%S'}    # 2012-02-20 07:49:09
 : ${STATE="/var/run/automount.state"}   # current state file
-: ${USER="0"}                           # which user to use for popup
+: ${USER="root"}                        # which user to use for popup
 
 # init of main variables
 DEV="/dev/${1}"
@@ -217,7 +217,7 @@ readonly FS_TYPE_EXFAT=33
 readonly FS_TYPE_NTFS=34
 readonly FS_TYPE_MTP=128
 
-# FUNCTION: guess filesystemy type from the device
+# FUNCTION: guess filesystem type from device
 __guess_fs_type() { # 1=DEV
   # first time guess with file(1) tool
   unset FS_TYPE
@@ -365,7 +365,7 @@ __wait_for_device() { # 1=DEV
   esac
   # try to read from device to ensure that it alive
   local COUNT=0
-  while ! dd if="${1}" of=/dev/null conv=sync count=1 bs=256k 1> /dev/null 2>&1
+  while ! dd if="${1}" of=/dev/null conv=sync count=1 bs=8k 1> /dev/null 2>&1
   do
     if [ ! -e "${1}" ]
     then
@@ -387,6 +387,7 @@ __check_block_device() { # 1=DEV
   # first check if its block device
   if ! fstyp ${1} 1> /dev/null 2>&1
   then
+    __log "ASD"
     __log "${DEV}: not a block device"
     exit 0
   fi
@@ -424,10 +425,13 @@ case ${2} in
         FS_TYPE=${FS_TYPE_ISO9660}
         ;;
       (ugen*)
-        __check_block_device "${DEV}"
         FS_TYPE=${FS_TYPE_MTP}
         ;;
-      (cd*|da*|mmcsd*)
+      (cd*)
+        __guess_fs_type "${DEV}"
+        FS_TYPE=${?}
+        ;;
+      (da*|mmcsd*)
         __check_block_device "${DEV}"
         __guess_fs_type "${DEV}"
         FS_TYPE=${?}
@@ -487,6 +491,7 @@ case ${2} in
       (${FS_TYPE_FAT})
         # FreeBSD 12.x does not support '-o large' option
         case $( sysctl -n kern.osrelease ) in
+          (10*) LARGE="-o large" ;;
           (11*) LARGE="-o large" ;;
           (*)   LARGE=""         ;;
         esac
@@ -525,14 +530,19 @@ case ${2} in
           __log "command '${FS_MOUNT_CMD}' not found"
           exit 1
         fi
-        PHONEDEV=$( simple-mtpfs --list-devices -d ${DEV} 2>&1 )
+        PHONEDEV=$( simple-mtpfs --list-devices -d ${DEV} 2> /dev/null )
         if [ "${PHONEDEV}" = "No raw devices found." ]
         then
           __log "${DEV}: no raw devices found"
           exit 0
         fi
         PHONEDEV=$( echo "${PHONEDEV}" | awk '{print $1}' | tr -d ':' )
-        FS_MOUNT_ARGS="--device ${PHONEDEV} ${MNT} -o allow_other -o intr -o big_writes -o uid=${UID} -o gid=${GID}"
+        if [ ! ${PHONEDEV} ]
+        then
+          __log "${DEV}: no MTP devices found"
+          exit 0
+        fi
+        FS_MOUNT_ARGS="--device ${PHONEDEV} ${MNT} -o allow_other -o uid=${UID} -o gid=${GID}"
         ;;
       (*)
         __log "${DEV}: filesystem not supported or no filesystem"
@@ -541,7 +551,7 @@ case ${2} in
     esac
 
     # create mount point
-    mkdir -m "${MNT_MODE}"    -p "${MNT}"
+    mkdir -m "${MNT_MODE}" -p "${MNT}"
     __log "${DEV}: create '${MNT}' dir"
 
     # check file system before mount
@@ -558,6 +568,9 @@ case ${2} in
             __log "${DEV}: ${FS_CHECK_CMD} ${LINE}"
           done
     fi
+
+    # check is device already mounted
+    __check_already_mounted "${DEV}" "${MNT}"
 
     # try to mount
     if ! /usr/bin/which -s "${FS_MOUNT_CMD}"

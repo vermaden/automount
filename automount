@@ -447,7 +447,7 @@ case ${2} in
         FS_CHECK_CMD=''
         FS_CHECK_ARGS=''
         FS_MOUNT_CMD='mount'
-        FS_MOUNT_ARGS="-t cd9660 -e -C=${ISO9660_CODEPAGE} ${DEV} ${MNT}"
+        FS_MOUNT_ARGS="-t cd9660 -C=${ISO9660_CODEPAGE} ${DEV} ${MNT}"
         ;;
       (${FS_TYPE_UFS})
         FS_CHECK_CMD='fsck_ufs'

@@ -387,7 +387,6 @@ __check_block_device() { # 1=DEV
   # first check if its block device
   if ! fstyp ${1} 1> /dev/null 2>&1
   then
-    __log "ASD"
     __log "${DEV}: not a block device"
     exit 0
   fi

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2012-2019 Slawomir Wojciech Wojtczak <vermaden@interia.pl>
+# Copyright (c) 2012-2020 Slawomir Wojciech Wojtczak <vermaden@interia.pl>
 # Copyright (c) 2019      Rozhuk Ivan                <rozhuk.im@gmail.com>
 # All rights reserved.
 #
@@ -144,7 +144,7 @@ if [ "${1}" = '--version' -o \
      "${1}" = 'version'   -o \
      "${1}" = '-v' ]
 then
-  echo "automount 1.7.1 2019/12/03"
+  echo "automount 1.7.1 2019/12/15"
   exit 0
 fi
 
@@ -455,37 +455,44 @@ case ${2} in
         FS_MOUNT_ARGS="-t ufs ${OPTS} ${DEV} ${MNT}"
         ;;
       (${FS_TYPE_EXT2})
+        FS_CHECK_PORT='sysutils/e2fsprogs'
         FS_CHECK_CMD='fsck.ext2'
         FS_CHECK_ARGS="-y"
         FS_MOUNT_CMD='mount'
         FS_MOUNT_ARGS="-t ext2fs ${OPTS} ${DEV} ${MNT}"
         ;;
       (${FS_TYPE_EXT3})
+        FS_CHECK_PORT='sysutils/e2fsprogs'
         FS_CHECK_CMD='fsck.ext3'
         FS_CHECK_ARGS="-y"
         FS_MOUNT_CMD='mount'
         FS_MOUNT_ARGS="-t ext2fs ${OPTS} ${DEV} ${MNT}"
         ;;
       (${FS_TYPE_EXT4})
-        # sysutils/fusefs-ext4fuse
+        FS_CHECK_PORT='sysutils/e2fsprogs'
         FS_CHECK_CMD='fsck.ext4'
         FS_CHECK_ARGS="-y"
-        FS_MOUNT_CMD='ext4fuse'
-        FS_MOUNT_ARGS="${DEV} ${MNT}"
+#       FS_MOUNT_PORT='sysutils/fusefs-ext4fuse'
+#       FS_MOUNT_CMD='ext4fuse'
+#       FS_MOUNT_ARGS="${DEV} ${MNT}"
+        FS_MOUNT_PORT='sysutils/fusefs-lkl'
+        FS_MOUNT_CMD='lklfuse'
+        FS_MOUNT_ARGS="-o type=ext4 -o allow_other -o intr -o uid=${UID} -o gid=${GID} -o umask=002 ${DEV} ${MNT}"
         ;;
       (${FS_TYPE_XFS})
-        # sysutils/fusefs-lkl
+        FS_CHECK_PORT='sysutils/xfsprogs'
         FS_CHECK_CMD='xfs_repair'
         FS_CHECK_ARGS="-d"
         FS_MOUNT_CMD='lklfuse'
         FS_MOUNT_ARGS="-o type=xfs -o allow_other -o uid=${UID} -o gid=${GID} ${DEV} ${MNT}"
+        FS_MOUNT_PORT='sysutils/fusefs-lkl'
         ;;
       (${FS_TYPE_HFS})
-        # sysutils/fusefs-hfsfuse
         FS_CHECK_CMD=''
         FS_CHECK_ARGS=''
         FS_MOUNT_CMD='hfsfuse'
         FS_MOUNT_ARGS="--force ${OPTS} ${DEV} ${MNT}"
+        FS_MOUNT_PORT='sysutils/fusefs-hfsfuse'
         ;;
       (${FS_TYPE_FAT})
         # FreeBSD 12.x does not support '-o large' option
@@ -500,27 +507,28 @@ case ${2} in
         FS_MOUNT_ARGS="-o longnames -m 644 -M ${MNT_MODE} -D ${FAT_CODEPAGE} -L ${FAT_ENCODING} -u ${UID} -g ${GID} ${OPTS} ${LARGE} ${DEV} ${MNT}"
         ;;
       (${FS_TYPE_EXFAT})
-        # sysutils/fusefs-exfat
+        FS_CHECK_PORT='sysutils/exfat-utils'
         FS_CHECK_CMD='fsck.exfat'
         FS_CHECK_ARGS="-y"
         FS_MOUNT_CMD='mount.exfat'
         FS_MOUNT_ARGS="-o uid=${UID} -o gid=${GID} -o dmask=022 -o fmask=133 ${OPTS} ${DEV} ${MNT}"
+        FS_MOUNT_PORT='sysutils/fusefs-exfat'
         ;;
       (${FS_TYPE_NTFS})
-        # sysutils/fusefs-ntfs
         FS_CHECK_CMD=''
         FS_CHECK_ARGS=''
         if /usr/bin/which -s ntfs-3g
         then
           FS_MOUNT_CMD='ntfs-3g'
           FS_MOUNT_ARGS="-o recover ${OPTS} ${DEV} ${MNT}"
+          FS_MOUNT_PORT='sysutils/fusefs-ntfs'
         else
           FS_MOUNT_CMD='mount_ntfs'
           FS_MOUNT_ARGS="-u root -g ${MNT_GROUP} ${OPTS} ${DEV} ${MNT}"
         fi
         ;;
       (${FS_TYPE_MTP})
-        # sysutils/fusefs-simple-mtpfs
+        FS_PORT='sysutils/fusefs-simple-mtpfs'
         FS_CHECK_CMD=''
         FS_CHECK_ARGS=''
         FS_MOUNT_CMD='simple-mtpfs'
@@ -559,6 +567,7 @@ case ${2} in
       if ! /usr/bin/which -s "${FS_CHECK_CMD}"
       then
         __log "command '${FS_CHECK_CMD}' not found"
+        __log "please install '${FS_CHECK_PORT}' port or package"
         exit 1
       fi
       ${FS_CHECK_CMD} ${FS_CHECK_ARGS} ${DEV} \
@@ -575,6 +584,7 @@ case ${2} in
     if ! /usr/bin/which -s "${FS_MOUNT_CMD}"
     then
       __log "command '${FS_MOUNT_CMD}' not found"
+      __log "please install '${FS_MOUNT_PORT}' port or package"
       exit 1
     fi
     __wait_for_device "${DEV}"
@@ -617,6 +627,7 @@ case ${2} in
         then
           continue
         fi
+         __log "${DEV}: starting '${FM}' file manager"
         su -l "${I}" -c "env DISPLAY=${DISPLAY_ID} ${FM} ${MNT} &" 1> /dev/null 2>&1
       done
     fi

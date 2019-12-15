@@ -144,7 +144,7 @@ if [ "${1}" = '--version' -o \
      "${1}" = 'version'   -o \
      "${1}" = '-v' ]
 then
-  echo "automount 1.7.1 2019/12/15"
+  echo "automount 1.7.2 2019/12/15"
   exit 0
 fi
 

@@ -41,7 +41,15 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.7.0 (CURRENT)
+VERSION 1.7.1 (CURRENT)
+
+Fix exFAT mount rights.
+Use USER option in config file.
+Make MTP detection and mount better.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.0
 
 The automount has now a new co-author - Rozhuk Ivan.
 New options available in automount.conf config file.

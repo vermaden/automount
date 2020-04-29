@@ -144,7 +144,7 @@ if [ "${1}" = '--version' -o \
      "${1}" = 'version'   -o \
      "${1}" = '-v' ]
 then
-  echo "automount 1.7.2 2019/12/15"
+  echo "automount 1.7.2 2020/01/14"
   exit 0
 fi
 
@@ -446,7 +446,7 @@ case ${2} in
         FS_CHECK_CMD=''
         FS_CHECK_ARGS=''
         FS_MOUNT_CMD='mount'
-        FS_MOUNT_ARGS="-t cd9660 -C=${ISO9660_CODEPAGE} ${DEV} ${MNT}"
+        FS_MOUNT_ARGS="-t cd9660 -o -e,-C=${ISO9660_CODEPAGE} ${DEV} ${MNT}"
         ;;
       (${FS_TYPE_UFS})
         FS_CHECK_CMD='fsck_ufs'
@@ -472,9 +472,6 @@ case ${2} in
         FS_CHECK_PORT='sysutils/e2fsprogs'
         FS_CHECK_CMD='fsck.ext4'
         FS_CHECK_ARGS="-y"
-#       FS_MOUNT_PORT='sysutils/fusefs-ext4fuse'
-#       FS_MOUNT_CMD='ext4fuse'
-#       FS_MOUNT_ARGS="${DEV} ${MNT}"
         FS_MOUNT_PORT='sysutils/fusefs-lkl'
         FS_MOUNT_CMD='lklfuse'
         FS_MOUNT_ARGS="-o type=ext4 -o allow_other -o intr -o uid=${UID} -o gid=${GID} -o umask=002 ${DEV} ${MNT}"
@@ -511,7 +508,8 @@ case ${2} in
         FS_CHECK_CMD='fsck.exfat'
         FS_CHECK_ARGS="-y"
         FS_MOUNT_CMD='mount.exfat'
-        FS_MOUNT_ARGS="-o uid=${UID} -o gid=${GID} -o dmask=022 -o fmask=133 ${OPTS} ${DEV} ${MNT}"
+        FS_MOUNT_UMASK=$( printf "%03o" $((~0775&0777)) )
+        FS_MOUNT_ARGS="-o uid=${UID} -o gid=${GID} -o umask=${FS_MOUNT_UMASK} ${OPTS} ${DEV} ${MNT}"
         FS_MOUNT_PORT='sysutils/fusefs-exfat'
         ;;
       (${FS_TYPE_NTFS})
@@ -589,7 +587,7 @@ case ${2} in
     fi
     __wait_for_device "${DEV}"
     COUNT=0
-    while ! ${FS_MOUNT_CMD} ${FS_MOUNT_ARGS}
+    while ! ${FS_MOUNT_CMD} ${FS_MOUNT_ARGS} 2> /dev/null
     do
       if [ ! -e "${DEV}" ]
       then
@@ -627,7 +625,7 @@ case ${2} in
         then
           continue
         fi
-         __log "${DEV}: starting '${FM}' file manager"
+        __log "${DEV}: starting '${FM}' file manager"
         su -l "${I}" -c "env DISPLAY=${DISPLAY_ID} ${FM} ${MNT} &" 1> /dev/null 2>&1
       done
     fi

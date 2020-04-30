@@ -41,7 +41,15 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.7.1 (CURRENT)
+VERSION 1.7.2 (CURRENT)
+
+Phase out support for sysutils/fusefs-ext4fuse port.
+Fix UMASK for exFAT filesystems.
+Fix ISO9660 mount options.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.1
 
 Fix exFAT mount rights.
 Use USER option in config file.

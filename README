@@ -1,3 +1,11 @@
+
+                     ___        /\                                ___
+                  __/  /_      /  \                              _\  \__
+     ____   _____/_   __/__   /  _/\   ___ ___   ____ ______   __\__   _\
+    /    \ /  /  //  //    \ /\_/   \ /   /   \ /    \\  \  \ /    \\  \
+   /  /  //  /  //  //  /  //        \\  \  \  \\  \  \\  \  \\  \  \\  \_
+   \_____\\____/ \__\\____//__________\\__\__\__\\____/ \_____\\__\__\\___\
+
 The 'automount' is a devd(8) based automounter for FreeBSD.
 
 It supports most popular file systems:
@@ -380,4 +388,7 @@ Remember to restart /etc/rc.d/devd daemon after adding
 
 Have Fun ;)
 vermaden
+
+
+
 

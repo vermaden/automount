@@ -29,12 +29,12 @@ Use provided FreeBSD Ports/packages from here:
 
 Now plugin Your USB thumb drive and have fun ;)
 
-These Ports/packages are neede for all filesystems:
+These ports/packages are needed for all filesystems:
 
 * sysutils/exfat-utils          // exFAT
 * sysutils/fusefs-exfat         // exFAT
 * sysutils/fusefs-ntfs          // NTFS (read write support)
-* sysutils/fusefs-ext4fuse      // EXT4
+* sysutils/fusefs-ext2          // EXT4
 * sysutils/fusefs-hfsfuse       // HFS
 * sysutils/fusefs-lkl           // XFS
 * sysutils/fusefs-simple-mtpfs  // MTP
@@ -70,7 +70,7 @@ VERSION 1.7.0
 The automount has now a new co-author - Rozhuk Ivan.
 New options available in automount.conf config file.
 Filesystem detection/mounting reworked totally with file(1)/dd(1)/fstyp(8) as backends.
-Notifications are now possible with libnitify(8) library.
+Notifications are now possible with libnotify.
 Automatic detection of DISPLAY variable.
 New automatic wait for device appearance.
 New detection if device is a block device.

@@ -49,7 +49,27 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.7.2 (CURRENT)
+VERSION 1.7.5 (CURRENT)
+
+Add REMOVEDIRS option as default.
+Add NICENAMES option to use labels instead of device names.
+Use procstat(1) for faster DISPLAY environemnt searching.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.4
+
+Add new logo.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.3
+
+Use 755 permissions for FAT mounts.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.2
 
 Phase out support for sysutils/fusefs-ext4fuse port.
 Fix UMASK for exFAT filesystems.

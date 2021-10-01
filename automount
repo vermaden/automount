@@ -134,6 +134,16 @@ USER (root by default)
 
   example: USER="vermaden"
 
+REMOVEDIRS (set to YES by default)
+  If set to YES the automount(8) will remove /media dir after unmount.
+
+  example: REMOVEDIRS=NO
+
+NICENAMES (set to NO by default)
+  If set to YES the device/filesystem label will be used for /media dir name.
+
+  example: NICENAMES=YES
+
 EOF
   exit 0
 }
@@ -152,7 +162,7 @@ then
   echo "  /  /  //  /  //  //  /  //        \\\  \  \  \\\  \  \\\  \  \\\  \  \\\  \_   "
   echo "  \_____\\\____/ \__\\\____//__________\\\__\__\__\\\____/ \_____\\\__\__\\\___\ "
   echo
-  echo "automount 1.7.4 2021/03/27"
+  echo "automount 1.7.5 2021/10/01"
   exit 0
 fi
 
@@ -190,10 +200,11 @@ fi
 : ${LOG_DATEFMT='%Y-%m-%d %H:%M:%S'}    # 2012-02-20 07:49:09
 : ${STATE="/var/run/automount.state"}   # current state file
 : ${USER="root"}                        # which user to use for popup
+: ${REMOVEDIRS='YES'}                   # remove /media dir after unmount
+: ${NICENAMES='NO'}                     # use device label for /media dir name
 
 # init of main variables
 DEV="/dev/${1}"
-MNT="${MNT_PREFIX}/${1}"
 UID=$( id -u ${USER} )
 GID=$( pw group show -n ${MNT_GROUP} | awk -F':' '{print $3}' )
 if [ ${?} -ne 0 ]
@@ -410,6 +421,37 @@ case ${2} in
       exit 1
     fi
     __log "${DEV}: attach"
+
+    # code for NICENAMES mounting instead of the /dev/${DEV} default
+    MNT_CANDIDATE=$( fstyp -l "/dev/${1}" 2> /dev/null | cut -d " " -f 2-99 | tr ' ' '-' )
+    if [ "${NICENAMES}" = "YES" -a -n "${MNT_CANDIDATE}" ]
+    then
+      # check if dir exists
+      if [ -e "${MNT_PREFIX}/${MNT_CANDIDATE}" ]
+      then
+        # check if something is already mounted there and increment if it is
+        if mount | grep -q " ${MNT_PREFIX}/${MNT_CANDIDATE} "
+        then
+          COUNT=1
+          while true
+          do
+            COUNT=$(( ${COUNT} + 1 ))
+            [ ! -e "${MNT_PREFIX}/${MNT_CANDIDATE}-${COUNT}" ] && break
+          done
+          MNT="${MNT_PREFIX}/${MNT_CANDIDATE}-${COUNT}"
+        else
+          # dir exists but its not mounted
+          MNT="${MNT_PREFIX}/${MNT_CANDIDATE}"
+        fi
+      else
+        # dir does not exists
+        MNT="${MNT_PREFIX}/${MNT_CANDIDATE}"
+      fi
+    else
+      # device/filesystem without label
+      MNT="${MNT_PREFIX}/${1}"
+    fi
+
     # blacklist check
     if [ -n "${BLACKLIST}" ]
     then
@@ -628,7 +670,8 @@ case ${2} in
       GROUP_USERS=$( pw group show ${MNT_GROUP} | sed -e 's|.*:||' -e 's|,| |g' )
       for I in ${GROUP_USERS}
       do
-        DISPLAY_ID=$( ps aew -U "${I}" | grep -v Xorg | sed -n 's|.*DISPLAY=\([-_a-zA-Z0-9:.]*\).*|\1|p' | sort -u | head -n 1 | tr -cd '[:print:]' )
+        [ "${I}" = "root" ] && continue
+        DISPLAY_ID=$( procstat pargs $( pgrep Xorg ) | grep "^argv\[1\]:" | awk '{print $NF}' )
         if [ -z "${DISPLAY_ID}" ]
         then
           continue
@@ -643,7 +686,7 @@ case ${2} in
     __log "${DEV}: detach"
     if [ -f ${STATE} ]
     then
-      grep -E "${MNT_PREFIX}/${1}$" ${STATE} \
+      grep -E "^/dev/${1}" ${STATE} \
         | while read DEV PROVIDER MNT
           do
             TARGET=$( mount | grep -v \.gvfs | grep -m 1 -E "^${PROVIDER} " | awk '{print $3}' )
@@ -654,16 +697,21 @@ case ${2} in
             fi
             ( # put entire umount/find/rm block into background
               umount -f "${TARGET}" 1> /dev/null 2>&1
-              __remove_dir "${TARGET}"
               __log "${DEV}: (state) umount '${TARGET}'"
+              __remove_dir "${TARGET}"
               __log "${DEV}: (state) mount point '${TARGET}' removed"
             ) &
             unset TARGET
           done
-      umount -f "${MNT_PREFIX}/${1}" 1> /dev/null 2>&1
-      __log "${DEV}: (direct) umount '${MNT_PREFIX}/${1}'"
-      __remove_dir "${MNT_PREFIX}/${1}"
-      __log "${DEV}: (direct) mount point '${MNT_PREFIX}/${1}' removed"
+
+      # code for NICENAMES mounting instead of the /dev/${DEV} default
+      if [ "${NICENAMES}" != YES ]
+      then
+        umount -f "${MNT_PREFIX}/${1}" 1> /dev/null 2>&1
+        __log "${DEV}: (direct) umount '${MNT_PREFIX}/${1}'"
+        __remove_dir "${MNT_PREFIX}/${1}"
+        __log "${DEV}: (direct) mount point '${MNT_PREFIX}/${1}' removed"
+      fi
       __show_message "Device '${DEV}' unmounted from '${MNT}' directory."
     fi
     ;;

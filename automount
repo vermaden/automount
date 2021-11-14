@@ -417,7 +417,7 @@ case ${2} in
     # check if device still exists
     if [ ! -e "${DEV}" ]
     then
-      __log "${DEV}: device does not exists"
+      __log "${DEV}: device does not exist"
       exit 1
     fi
     __log "${DEV}: attach"
@@ -444,7 +444,7 @@ case ${2} in
           MNT="${MNT_PREFIX}/${MNT_CANDIDATE}"
         fi
       else
-        # dir does not exists
+        # dir does not exist
         MNT="${MNT_PREFIX}/${MNT_CANDIDATE}"
       fi
     else

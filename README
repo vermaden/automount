@@ -49,7 +49,17 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.7.5 (CURRENT)
+VERSION 1.7.6 (CURRENT)
+
+Added UZIP images support.
+Added another try to mount device in read only mode.
+Added optional ada(4) disks support.
+Added optional md(4) devices support.
+Added automatic kernel modules loading.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.5
 
 Add REMOVEDIRS option as default.
 Add NICENAMES option to use labels instead of device names.

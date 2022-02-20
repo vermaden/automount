@@ -336,6 +336,7 @@ __remove_dir() { # 1=TARGET
   then
     if [ -d "${1}" ]
     then
+      sleep 1
       find "${1}" -type d -empty -maxdepth 1 -exec rm -r {} '+' 2> /dev/null
     fi
   fi
@@ -740,7 +741,7 @@ case ${2} in
             ( # put entire umount/find/rm block into background
               umount -f "${TARGET}" 1> /dev/null 2>&1
               __log "${DEV}: (state) umount '${TARGET}'"
-              __remove_dir "${TARGET}"
+              __remove_dir "${TARGET}" &
               __log "${DEV}: (state) mount point '${TARGET}' removed"
             ) &
             unset TARGET
@@ -751,7 +752,7 @@ case ${2} in
       then
         umount -f "${MNT_PREFIX}/${1}" 1> /dev/null 2>&1
         __log "${DEV}: (direct) umount '${MNT_PREFIX}/${1}'"
-        __remove_dir "${MNT_PREFIX}/${1}"
+        __remove_dir "${MNT_PREFIX}/${1}" &
         __log "${DEV}: (direct) mount point '${MNT_PREFIX}/${1}' removed"
       fi
       __show_message "Device '${DEV}' unmounted from '${MNT}' directory."

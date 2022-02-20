@@ -49,7 +49,16 @@ C  H  A  N  G  E  L  O  G
 
 -------------------------------------------------------------------------------
 
-VERSION 1.7.6 (CURRENT)
+VERSION 1.7.7 (CURRENT)
+
+Add option to ignore system partitions like EFI or MSR.
+Fix removal of dirs from unmounted filesystems.
+Fix mount permissions for FAT filesystems.
+Add spaces and comments in the code.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.6
 
 Added UZIP images support.
 Added another try to mount device in read only mode.

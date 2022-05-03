@@ -144,7 +144,6 @@ NICENAMES (set to NO by default)
 
   example: NICENAMES=YES
 
-
 IGNORE_SYS_PARTS (set to NO by default)
   If set to YES automount(8) will ignore system partitions like EFI or MSR.
 
@@ -168,7 +167,7 @@ then
   echo "  /  /  //  /  //  //  /  //        \\\  \  \  \\\  \  \\\  \  \\\  \  \\\  \_   "
   echo "  \_____\\\____/ \__\\\____//__________\\\__\__\__\\\____/ \_____\\\__\__\\\___\ "
   echo
-  echo "automount 1.7.7 2022/02/20"
+  echo "automount 1.7.8 2022/05/03"
   exit 0
 fi
 
@@ -196,8 +195,8 @@ fi
 : ${FAT_CODEPAGE='cp437'}               # US/Canada
 : ${ISO9660_CODEPAGE='UTF-8'}           # UTF-8
 : ${ATIME='NO'}                         # when NO mount with noatime
-: ${RETRY_COUNT='3'}                    # retry count
-: ${RETRY_DELAY='1'}                    # retry delay time
+: ${RETRY_COUNT='5'}                    # retry count
+: ${RETRY_DELAY='2'}                    # retry delay time
 : ${USERUMOUNT='NO'}                    # when YES add suid bit to umount(8)
 : ${NOTIFY='NO'}                        # use notify-send(1) (devel/libnotify)
 : ${WALL='NO'}                          # use wall(1)
@@ -264,7 +263,7 @@ __guess_fs_type() { # 1=DEV
   case ${FS_TYPE} in
     (*Unix\ Fast\ File*) return ${FS_TYPE_UFS}  ;;
     (*NTFS*)             return ${FS_TYPE_NTFS} ;;
-    (*FAT*|*MSDOS*)      return ${FS_TYPE_FAT}  ;;
+    (*\ FAT\ *|*MSDOS*)  return ${FS_TYPE_FAT}  ;;
   esac
   # try with fstyp(8) last (exFAT on UFS issue)
   unset FS_TYPE
@@ -729,7 +728,7 @@ case ${2} in
     __log "${DEV}: detach"
     if [ -f ${STATE} ]
     then
-      grep -E "^/dev/${1}" ${STATE} \
+      grep -E "^/dev/${1} " ${STATE} \
         | while read DEV PROVIDER MNT
           do
             TARGET=$( mount | grep -v \.gvfs | grep -m 1 -E "^${PROVIDER} " | awk '{print $3}' )
@@ -739,6 +738,7 @@ case ${2} in
               continue
             fi
             ( # put entire umount/find/rm block into background
+              umount -f "${TARGET}" 1> /dev/null 2>&1
               umount -f "${TARGET}" 1> /dev/null 2>&1
               __log "${DEV}: (state) umount '${TARGET}'"
               __remove_dir "${TARGET}" &

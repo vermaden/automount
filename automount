@@ -167,7 +167,7 @@ then
   echo "  /  /  //  /  //  //  /  //        \\\  \  \  \\\  \  \\\  \  \\\  \  \\\  \_   "
   echo "  \_____\\\____/ \__\\\____//__________\\\__\__\__\\\____/ \_____\\\__\__\\\___\ "
   echo
-  echo "automount 1.7.8 2022/05/03"
+  echo "automount 1.7.9 2022/05/24"
   exit 0
 fi
 
@@ -713,11 +713,10 @@ case ${2} in
       for I in ${GROUP_USERS}
       do
         [ "${I}" = "root" ] && continue
-        DISPLAY_ID=$( procstat pargs $( pgrep Xorg ) | grep "^argv\[1\]:" | awk '{print $NF}' )
-        if [ -z "${DISPLAY_ID}" ]
-        then
-          continue
-        fi
+        XORG_PID=$( pgrep Xorg )
+        [ "${XORG_PID}" = "" ] && continue
+        DISPLAY_ID=$( procstat pargs ${XORG_PID} | grep "^argv\[1\]:" | awk '{print $NF}' )
+        [ -z "${DISPLAY_ID}" ] && continue
         __log "${DEV}: starting '${FM}' file manager"
         su -l "${I}" -c "env DISPLAY=${DISPLAY_ID} ${FM} ${MNT} &" 1> /dev/null 2>&1
       done

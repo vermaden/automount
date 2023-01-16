@@ -125,6 +125,14 @@ BLACKLIST (unset by default)
 
   example: BLACKLIST='da0 da3s1a'
 
+BLACKLIST_REGEX (unset by default)
+  The boolean flag option complements the above BLACKLIST option 
+  if one wants regex match instead of exact match for ignoring devices
+  
+  example: BLACKLIST='ada0'
+           BLACKLIST_REGEX=true
+         will ignore all partitions ada0p1, ada0p2 of device ada0 
+
 USER (root by default)
   If set to some username, the mount command will
   chown(1) the mount directory with the user and
@@ -478,6 +486,10 @@ case ${2} in
         if [ "${1}" = "${I}" ]
         then
           __log "${DEV}: device blocked by BLACKLIST option"
+          exit 0
+        elif [ -n "${BLACKLIST_REGEX}" ]  &&  echo ${DEV} | grep -q "${I}"  
+        then
+          __log "${DEV}: device blocked by BLACKLIST regex option"  
           exit 0
         fi
       done

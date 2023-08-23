@@ -13,6 +13,7 @@ It supports most popular file systems:
 
 -------------------------------------------------------------------------------
 
+
 I  N  S  T  A  L  L
 ===================
 
@@ -31,27 +32,49 @@ Now plugin Your USB thumb drive and have fun ;)
 
 These ports/packages are needed for all filesystems:
 
-* sysutils/exfat-utils          // exFAT
+* sysutils/e2fsprogs            // EXT2/EXT3/EXT4 fsck(8)
+* sysutils/xfsprogs             // XFS fsck(8)
+* sysutils/exfat-utils          // exFAT exfatfsck(8)
 * sysutils/fusefs-exfat         // exFAT
 * sysutils/fusefs-ntfs          // NTFS (read write support)
-* sysutils/fusefs-ext2          // EXT4
 * sysutils/fusefs-hfsfuse       // HFS
-* sysutils/fusefs-lkl           // XFS
+* sysutils/fusefs-lkl           // XFS/EXT2/EXT3/EXT4
 * sysutils/fusefs-simple-mtpfs  // MTP
 
-Regards,
-vermaden
+All of the above are available as pkg(8) packages.
+
+Shortcut:
+
+# pkg install -y                 \
+    sysutils/e2fsprogs           \
+    sysutils/xfsprogs            \
+    sysutils/exfat-utils         \
+    sysutils/fusefs-exfat        \
+    sysutils/fusefs-ntfs         \
+    sysutils/fusefs-hfsfuse      \
+    sysutils/fusefs-lkl          \
+    sysutils/fusefs-simple-mtpfs
 
 -------------------------------------------------------------------------------
+
 
 C  H  A  N  G  E  L  O  G
 =========================
 
--------------------------------------------------------------------------------
-
-VERSION 1.7.8 (CURRENT)
+VERSION 1.7.9 (CURRENT)
 
 Fix XORG detection.
+Implement proposed BLACKLIST_REGEX option.
+Use 'sysutils/fusefs-lkl' for all ext2/ext3/ext4 mounts.
+Fix exFAT detection.
+Fix small problem with checking the mount state.
+Implement better old directory cleanup.
+
+-------------------------------------------------------------------------------
+
+VERSION 1.7.8
+
+Fix harmless gpart(8) rant about ugen(4) devices.
 
 -------------------------------------------------------------------------------
 
@@ -465,6 +488,8 @@ The only additional configuration it requires is to add these lines as
 
 Remember to restart /etc/rc.d/devd daemon after adding
 /usr/local/etc/devd/automount_devd.conf file.
+
+------------------------------------------------------------------------------
 
 Have Fun ;)
 vermaden

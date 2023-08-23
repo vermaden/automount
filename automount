@@ -35,7 +35,6 @@ UFS/FAT/exFAT/NTFS/EXT2/EXT3/EXT4/MTP/HFS/ISO9660
 Add these to mount NTFS/exFAT/EXT4/HFS/XFS/MTP respectively:
  o sysutils/fusefs-ntfs
  o sysutils/fusefs-exfat
- o sysutils/fusefs-ext4fuse
  o sysutils/fusefs-hfsfuse
  o sysutils/fusefs-lkl
  o sysutils/fusefs-simple-mtpfs

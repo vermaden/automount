@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2012-2022 Slawomir Wojciech Wojtczak <vermaden@interia.pl>
+# Copyright (c) 2012-2024 Slawomir Wojciech Wojtczak <vermaden@interia.pl>
 # Copyright (c) 2019      Rozhuk Ivan                <rozhuk.im@gmail.com>
 # All rights reserved.
 #
@@ -175,7 +175,7 @@ then
   echo "  /  /  //  /  //  //  /  //        \\\  \  \  \\\  \  \\\  \  \\\  \  \\\  \_   "
   echo "  \_____\\\____/ \__\\\____//__________\\\__\__\__\\\____/ \_____\\\__\__\\\___\ "
   echo
-  echo "automount 1.7.9 2023/08/23"
+  echo "automount 1.8.0 2024/03/05"
   exit 0
 fi
 
@@ -505,7 +505,6 @@ case ${2} in
 
     # load needed kernel modules
     kldload fusefs    1> /dev/null 2> /dev/null
-    kldload fuse      1> /dev/null 2> /dev/null
     kldload geom_uzip 1> /dev/null 2> /dev/null
 
     # detect filesysytem type

@@ -112,6 +112,13 @@ WALL (set to NO by default)
 
   example: WALL='YES'
 
+FMOPEN (set to YES by default)
+  After successful mount, when set to YES it will open the
+  default file manager or the specified file manager when
+  used with FM option.
+
+  example: FMOPEN='YES'
+
 FM ('exo-open --launch FileManager' by default)
   If set to file manager command, the mount will
   launch the specified command after successful
@@ -208,6 +215,7 @@ fi
 : ${USERUMOUNT='NO'}                    # when YES add suid bit to umount(8)
 : ${NOTIFY='NO'}                        # use notify-send(1) (devel/libnotify)
 : ${WALL='NO'}                          # use wall(1)
+: ${FMOPEN='YES'}                       # when YES open file manager after mount(8)
 : ${FM='exo-open --launch FileManager'} # which file manager to use
 : ${LOG_FILE='/var/log/automount.log'}  # log file
 : ${LOG_DATEFMT='%Y-%m-%d %H:%M:%S'}    # 2012-02-20 07:49:09
@@ -722,7 +730,7 @@ case ${2} in
 
     # open file manager and display message
     __show_message "Device '${DEV}' mounted on '${MNT}' directory."
-    if [ -n "${FM}" ]
+    if [ -n "${FM}" ] && [ "${FMOPEN}" = "YES" ]
     then
       GROUP_USERS=$( pw group show ${MNT_GROUP} | sed -e 's|.*:||' -e 's|,| |g' )
       for I in ${GROUP_USERS}

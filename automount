@@ -216,6 +216,10 @@ fi
 : ${REMOVEDIRS='YES'}                   # remove /media dir after unmount
 : ${NICENAMES='NO'}                     # use device label for /media dir name
 : ${IGNORE_SYS_PARTS='NO'}              # ignore system partitions like EFI or MSR
+: ${USE_BSDISKS='NO'}                   # use with gvfs/bsdisks 
+
+# check if bsdisks installed
+[ -x $(/usr/bin/which bsdisks) ] && USE_BSDISKS='YES' 
 
 # init of main variables
 DEV="/dev/${1}"
@@ -228,6 +232,7 @@ then
 fi
 
 # process ${USERUMOUNT} option
+__bsdisks
 case ${USERUMOUNT} in
   ([Yy][Ee][Ss])
     chmod u+s /sbin/umount    1> /dev/null 2>&1 # WHEEL group member
@@ -425,6 +430,17 @@ __check_block_device() { # 1=DEV
   then
     __log "${DEV}: not a block device"
     exit 0
+  fi
+}
+
+# FUNCTION: make sure bsdisk is running
+__bsdisks() {
+  BSDISKS_PID=$( pgrep bsdisks )
+  if [ -z "${BSDISKS_PID}" ] && [ "${USE_BSDISKS}" = 'YES' ] 
+  then
+    /usr/local/bin/bsdisks --no-debug --syslog-output &
+    __log "bsdisks started"
+    sleep 1 
   fi
 }
 
@@ -672,6 +688,8 @@ case ${2} in
     __check_already_mounted "${DEV}" "${MNT}"
 
     # try to mount
+    __bsdisks
+    [ ${USE_BSDISKS} = "YES" ] && sleep 1
     if ! /usr/bin/which -s "${FS_MOUNT_CMD}"
     then
       __log "command '${FS_MOUNT_CMD}' not found"
@@ -715,6 +733,7 @@ case ${2} in
     # add needed rights
     chown "${USER}:${MNT_GROUP}" "${MNT}"
     __log "${DEV}: chown '${MNT}' dir with '${USER}:${MNT_GROUP}' rights"
+    __bsdisks
 
     # add state
     PROVIDER=$( mount | grep -m 1 " ${MNT} " | awk '{printf $1}' )
@@ -771,6 +790,7 @@ case ${2} in
         __log "${DEV}: (direct) umount '${MNT_PREFIX}/${1}'"
         __remove_dir "${MNT_PREFIX}/${1}" &
         __log "${DEV}: (direct) mount point '${MNT_PREFIX}/${1}' removed"
+        __bsdisks
       fi
       __show_message "Device '${DEV}' unmounted from '${MNT}' directory."
     fi
